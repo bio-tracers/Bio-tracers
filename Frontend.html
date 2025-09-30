@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <title>eDNA-Bio</title>
+ <style>
+ body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f7f9; color: #333; }
+ header { background: #2a4365; color: #fff; padding: 15px; text-align: center; font-size: 1.5em; }
+ nav { display: flex; justify-content: center; background: #1a365d; }
+ nav button { background: none; border: none; color: #fff; padding: 12px 20px; cursor: pointer; font-size: 1em; }
+ nav button:hover { background: #2c5282; }
+ .container { padding: 20px; }
+ .widget { display: none; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+ .active { display: block; }
+ table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+ th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+ th { background: #2a4365; color: #fff; }
+ input, select, button { padding: 8px; margin: 5px 0; }
+ .btn { background: #2a4365; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+ .btn:hover { background: #2c5282; }
+ .report { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 6px; background: #f9fafb; }
+ </style>
+</head>
+<body>
+ <header>eDNA-Bio</header>
+ <nav>
+ <button onclick="showWidget('records')">DNA Records</button>
+ <button onclick="showWidget('upload')">DNA Image Upload & Match</button>
+ <button onclick="showWidget('reports')">Lab Reports</button>
+ </nav>
+ <div class="container">
+ <!-- DNA Records Widget -->
+ <div id="records" class="widget active">
+ <h2>DNA Records</h2>
+ <form id="recordForm">
+ <input type="text" id="name" placeholder="Name" required>
+ <input type="number" id="age" placeholder="Age" required>
+ <input type="text" id="species" placeholder="Species" required>
+ <input type="text" id="cause" placeholder="Cause of Death" required>
+ <input type="text" id="sampleId" placeholder="Sample ID" required>
+ <input type="text" id="blood" placeholder="Blood Type" required>
+ <input type="number" id="yob" placeholder="Year of Birth" required>
+ <button type="submit" class="btn">Add Record</button>
+ </form>
+ <table id="recordsTable">
+ <thead>
+ <tr>
+ <th>Name</th><th>Age</th><th>Species</th><th>Cause of Death</th>
+ <th>Sample ID</th><th>Blood Type</th><th>Year of Birth</th>
+ </tr>
+ </thead>
+ <tbody></tbody>
+ </table>
+ </div>
+ <!-- DNA Upload & Match Widget -->
+ <div id="upload" class="widget">
+ <h2>DNA Image Upload & Match</h2>
+ <input type="file" id="dnaImage">
+ <button class="btn" onclick="analyzeImage()">Scan & Match</button>
+ <div id="scanResult"></div>
+   </div>
+    <!-- Lab Reports Widget -->
+ <div id="reports" class="widget">
+ <h2>Lab Reports</h2>
+ <div id="reportsList"></div>
+ </div>
+ </div>
+ <script>
+ const API_URL = "http://localhost:5000";
+ function showWidget(id) {
+ document.querySelectorAll('.widget').forEach(w => w.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ }
+ async function fetchRecords() {
+ const res = await fetch(`${API_URL}/records`);
+ const data = await res.json();
+ renderRecords(data);
+ }
+ async function fetchReports() {
+ const res = await fetch(`${API_URL}/reports`);
+ const data = await res.json();
+ renderReports(data);
+ }
+ function renderRecords(records) {
+ const tbody = document.querySelector("#recordsTable tbody");
+ tbody.innerHTML = "";
+ records.forEach(r => {
+ tbody.innerHTML += `<tr><td>${r.name}</td><td>${r.age}</td><td>${r.species}</td><td>${r.cause}</td><td>${r.sampleId}</td><td>${r.blood}</td><td>${r.yob}</td></tr>`;
+ });
+ }
+ function renderReports(reports) {
+ const list = document.getElementById("reportsList");
+ list.innerHTML = "";
+ reports.forEach(r => {
+ list.innerHTML += `<div class="report"><p><b>Name:</b> ${r.name}</p><p><b>Age:</b> ${r.age}</p><p><b>Species:</b> ${r.species}</p><p><b>Blood Type:</b> ${r.blood}</p><p><b>Cause of Death:</b> ${r.cause}</p><p><b>Year of Birth:</b> ${r.yob}</p><p><b>Match %:</b> ${r.matchPercent}%</p></div>`;
+ });
+ }
+ document.getElementById("recordForm").addEventListener("submit", async function(e) {
+ e.preventDefault();
+ const newRecord = {
+ name: document.getElementById("name").value,
+ age: document.getElementById("age").value,
+ species: document.getElementById("species").value,
+ cause: document.getElementById("cause").value,
+ sampleId: document.getElementById("sampleId").value,
+ blood: document.getElementById("blood").value,
+ yob: document.getElementById("yob").value
+ };
+ await fetch(`${API_URL}/records`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newRecord) });
+ fetchRecords();
+ this.reset();
+ });
+ async function analyzeImage() {
+ const resultDiv = document.getElementById("scanResult");
+ resultDiv.innerHTML = "<p>Scanning DNA image... (simulated)</p>";
+ setTimeout(async () => {
+ const res = await fetch(`${API_URL}/records`);
+ const records = await res.json();
+ if (records.length > 0) {
+ const match = records[Math.floor(Math.random() * records.length)];
+ resultDiv.innerHTML = `<p><b>Match Found:</b> ${match.name}, ${match.species}</p>`;
+ const report = { name: match.name, age: match.age, species: match.species, cause: match.cause, blood: match.blood, yob: match.yob, matchPercent: Math.floor(Math.random() * 21) + 80 };
+ await fetch(`${API_URL}/reports`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(report) });
+ fetchReports();
+ } else {
+ resultDiv.innerHTML = "<p>No match found. Please add new record.</p>";
+ }
+ }, 1500);
+ }
+ fetchRecords();
+ fetchReports();
+ </script>
+</body>
+</html>
